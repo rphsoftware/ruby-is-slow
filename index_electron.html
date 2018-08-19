@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ruby sucks</title>
+    <style>
+        html, body {
+            margin: 0;
+            overflow-y: hidden;
+            background-color: black;
+        }
+        h1, h3 {
+            font-family: sans-serif;
+            margin: 0;
+            color: rgba(50%, 50%, 50%, 0.5);
+            font-weight: 300;
+        }
+        #activation-overlay {
+            position: absolute;
+            z-index: 1;
+            bottom: 100px;
+            right: 100px;
+        }
+        #config-button {
+            width: 20px;
+            height: 1px;
+            background-color: rgba(0,0,0,0);
+            position: absolute;
+            z-index: 1;
+            top: 0;
+            left: 0;
+            font-size: 1px;
+            -webkit-user-select: none;
+            cursor: pointer;
+            font-family: sans-serif;
+        }
+        #config-button:hover {
+            font-size: 24px;
+            width: auto;
+            height: auto;
+            background-color: black;
+            color: white;
+        }
+        #exit-button {
+            width: 20px;
+            height: 1px;
+            background-color: rgba(0,0,0,0);
+            position: absolute;
+            z-index: 1;
+            top: 0;
+            right: 0;
+            font-size: 1px;
+            -webkit-user-select: none;
+            cursor: pointer;
+            font-family: sans-serif;
+        }
+        #exit-button:hover {
+            font-size: 24px;
+            width: auto;
+            height: auto;
+            background-color: black;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+<div id="config-button" onclick="document.location.href='config.html';">CONFIGURE</div>
+<div id="exit-button" onclick="require('electron').remote.app.quit();">EXIT</div>
+<h1 id="loading">Loading...</h1>
+<div id="activation-overlay">
+    <h1>Activate Windows</h1>
+    <h3>Go to PC settings to activate windows</h3>
+</div>
+</body>
+
+<script>
+    let cfg = {};
+    (function() {
+        const fs = require('fs');
+        const electron = require('electron').remote;
+        let pat = electron.app.getPath('userData');
+        let x = fs.readFileSync(`${pat}/RRRconfig.json`, "UTF-8");
+        x = JSON.parse(x);
+
+        cfg = x;
+        if (cfg.activate !== true) {
+            document.getElementById("activation-overlay").style.display = "none";
+        }
+
+        if (cfg.music[0] === true) {
+            let elem = document.createElement("audio");
+            elem.autoplay = true;
+            elem.loop = true;
+
+            let src = document.createElement("source");
+            src.src = cfg.music[1] + ".mp3";
+
+            elem.appendChild(src);
+
+            document.getElementsByTagName("body")[0].appendChild(elem);
+        }
+
+        document.getElementById("loading").style.display = "none";
+    })();
+</script>
+
+<script>
+    // TODO: move to separate file
+    function random(min, max) {
+        return Math.floor(Math.random() * (max - min) + min);
+    }
+
+    function color() {
+        let rval = "#";
+        rval = rval + random(0, 255).toString(16);
+        rval = rval + random(0, 255).toString(16);
+        rval = rval + random(0, 255).toString(16);
+        return rval;
+    }
+</script>
+
+<script>
+    let r = 255;
+    let g = 0;
+    let b = 0;
+    let stage = 0;
+    let runs = 0;
+    let objs = [];
+    function nextRGB() {
+        runs++;
+        if (runs > 255) {
+            runs = 0;
+            stage++;
+        }
+        if (stage > 5) {
+            stage = 0;
+        }
+        switch(stage) {
+            case 0:
+                g = runs;
+                break;
+            case 1:
+                r = 255 - runs;
+                break;
+            case 2:
+                b = runs;
+                break;
+            case 3:
+                g = 255 - runs;
+                break;
+            case 4:
+                r = runs;
+                break;
+            case 5:
+                b = 255 - runs;
+                break;
+        }
+    }
+    // Dynamic canvas creation
+    let w = document.documentElement.clientWidth;
+    let h = document.documentElement.clientHeight;
+
+    let canv = document.createElement('canvas');
+    canv.width = w;
+    canv.height = h;
+    document.getElementsByTagName('body')[0].appendChild(canv);
+
+    let canvDraw = canv.getContext('2d');
+
+
+    let objsReverse = [];
+    function drawFrameForward() {
+        nextRGB();
+        if (cfg.rgb) {
+            canvDraw.fillStyle = 'rgb(' + Math.floor(r / 2) + ',' + Math.floor(g / 2) + ',' + Math.floor(b / 2) + ')';
+            canvDraw.fillRect(0, 0, w, h);
+        } else {
+            canvDraw.fillStyle = "#000000";
+            canvDraw.fillRect(0, 0, w, h);
+        }
+        let toDelete = [];
+        for (let i = 0; i < objs.length; i++) {
+            canvDraw.font = objs[i].size + "px Comic Sans MS";
+            canvDraw.fillStyle = objs[i].color;
+            canvDraw.fillText(objs[i].text, objs[i].x, objs[i].y);
+            objs[i].x += objs[i].speed;
+            let accel;
+            if (objs[i].y < h/3) {
+                accel = 0.1;
+            } else if (objs[i].y > (h - h/3)) {
+                accel = 0.3;
+            } else {
+                accel = 0.2;
+            }
+            if (objs[i].x > -350)
+                objs[i].speed += accel;
+            if (objs[i].x >= w) {
+                toDelete.push(i);
+            }
+        }
+        for (let i = 0; i < toDelete.length; i++) {
+            objs.splice(toDelete[i] - i, 1);
+        }
+        drawFrameReverse();
+        requestAnimationFrame(drawFrameForward);
+    }
+
+    function drawFrameReverse() {
+        let toDelete = [];
+        for (let i = 0; i < objsReverse.length; i++) {
+            canvDraw.font = objsReverse[i].size + "px Comic Sans MS";
+            canvDraw.fillStyle = objsReverse[i].color;
+            canvDraw.fillText(objsReverse[i].text, objsReverse[i].x, objsReverse[i].y);
+            objsReverse[i].x -= objsReverse[i].speed;
+            if (objsReverse[i].x < -1000) {
+                toDelete.push(i);
+            }
+            let accel;
+            if (objsReverse[i].y < h/3) {
+                accel = 0.1;
+            } else if (objsReverse[i].y > (h - h/3)) {
+                accel = 0.3;
+            } else {
+                accel = 0.2;
+            }
+            objsReverse[i].speed += accel;
+        }
+        for (let i = 0; i < toDelete.length; i++) {
+            objsReverse.splice(toDelete[i] - i, 1);
+        }
+    }
+
+    requestAnimationFrame(drawFrameForward);
+
+    let forward = true;
+    setInterval(function() {
+        if (forward) {
+            objs.push({
+                size: random(12, 48),
+                color: color(),
+                x: -500,
+                y: random(50, h - 50),
+                speed: Math.random() * 10,
+                text: cfg.texts[Math.floor(Math.random() * cfg.texts.length)]
+            });
+            forward = false;
+        } else {
+
+            objsReverse.push({
+                size: random(12, 48),
+                color: color(),
+                x: w,
+                y: random(50, h - 50),
+                speed: Math.random() * 10,
+                text: cfg.texts[Math.floor(Math.random() * cfg.texts.length)]
+            });
+            forward = true;
+        }
+    }, cfg.rate);
+</script>
+</html>

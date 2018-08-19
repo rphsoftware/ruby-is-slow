@@ -1,0 +1,51 @@
+{
+  "name": "meme-land",
+  "version": "0.1.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^2.0.7",
+    "electron-builder": "^20.28.1"
+  },
+  "author": {
+    "name":"Rph",
+    "email":"admin@rph.space"
+  },
+    "homepage":"http://rph.space/",
+  "email":"admin@rph.space",
+  "dependencies": {},
+  "build": {
+    "appId": "space.rph.storesafe",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "deb",
+          "arch": [
+            "x64",
+            "armv7l"
+          ]
+        },
+        {
+          "target": "tar.gz",
+          "arch": [
+            "x64",
+            "armv7l"
+          ]
+        }
+      ]
+    }
+  }
+}

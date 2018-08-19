@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Configuration</title>
+    <style>
+        html, body {
+            margin: 0;
+            background-color: black;
+        }
+        h1 {
+            color: white;
+            font-size: 48px;
+            margin: 0;
+            font-family: "Comic Sans MS", sans-serif;
+            font-weight: 300;
+        }
+    </style>
+</head>
+<body>
+<canvas id="top-bar"></canvas>
+<h1>
+    Music
+</h1>
+<select onchange="updateConfig()"></select>
+<h1>
+    Activate Windows overlay
+</h1>
+<input type="checkbox" id="activate-windows" onchange="updateConfig()">
+
+<h1>
+    RGB background
+</h1>
+<input type="checkbox" id="rgb-bg" onchange="updateConfig()">
+
+<h1>
+    Spawn next text every miliseconds
+</h1>
+<input type="number" id="rate" onchange="updateConfig()" min="1" max="1000">
+
+<h1>
+    Texts separated with new lines
+</h1>
+<textarea id="texts" cols="100" rows="10" onblur="updateConfig()"></textarea>
+<br/>
+<button onclick="exit()">EXIT</button>
+
+<script>
+    let toReset = 0;
+    function updateConfig() {
+        text = "SAVED";
+        toReset = 60;
+
+        const fs = require('fs');
+        const electron = require('electron').remote;
+        let pat = electron.app.getPath('userData');
+
+        // Build config
+        let cfg = {
+            version: 1
+        };
+
+        // Music
+        let music = document.getElementsByTagName('select')[0].value;
+        if (music === "no")
+            cfg.music = [false, 999];
+        else
+            cfg.music = [true, music];
+
+        // Activate windows
+        cfg.activate = document.getElementById("activate-windows").checked;
+
+        // RGB
+        cfg.rgb = document.getElementById("rgb-bg").checked;
+
+        // Rate
+        let rate = document.getElementById("rate").value;
+        if (rate > 1000)
+            rate = 1000;
+
+        if (rate < 2)
+            rate = 2;
+
+        cfg.rate = Number(rate);
+
+        // Texts
+        let texts = document.getElementById("texts").value;
+        texts = texts.split("\n");
+        for (let i=texts.length - 1;i>= 0;i--) {
+            if (texts[i].length === 0) {
+                texts.splice(i, 1);
+            }
+        }
+
+        cfg.texts = texts;
+
+        fs.writeFileSync(`${pat}/RRRconfig.json`, JSON.stringify(cfg));
+    }
+
+    function exit() {
+        updateConfig();
+        text = "Bye!";
+        setTimeout(function() {
+            document.location.href = "index_electron.html";
+        }, 500);
+    }
+</script>
+
+<script>
+    (function() {
+        const musicBinding = [
+            "Scary monsters and nice sprites MIDI",
+            "canyon.mid",
+            "onestop.mid",
+            "Darude Sandstorm MIDI",
+            "All Star MIDI",
+            "title.wma"
+        ];
+        let html = "";
+        let elem = document.getElementsByTagName('select')[0];
+        for (let i=0;i<musicBinding.length;i++) {
+            let x = document.createElement("option");
+            x.value = i;
+            x.innerText = musicBinding[i];
+            elem.appendChild(x);
+        }
+        let x = document.createElement("option");
+        x.value = "no";
+        x.innerText = "No music ;-;";
+        elem.appendChild(x);
+    })();
+</script>
+
+<script>
+    let r = 255;
+    let g = 0;
+    let b = 0;
+    let stage = 0;
+    let runs = 0;
+    function nextRGB() {
+        runs++;
+        if (runs > 255) {
+            runs = 0;
+            stage++;
+        }
+        if (stage > 5) {
+            stage = 0;
+        }
+        switch(stage) {
+            case 0:
+                g = runs;
+                break;
+            case 1:
+                r = 255 - runs;
+                break;
+            case 2:
+                b = runs;
+                break;
+            case 3:
+                g = 255 - runs;
+                break;
+            case 4:
+                r = runs;
+                break;
+            case 5:
+                b = 255 - runs;
+                break;
+        }
+    }
+
+    let w = document.documentElement.clientWidth;
+    let h = 50;
+
+    let canv = document.getElementById("top-bar");
+    canv.width = w;
+    canv.height = h;
+
+    let canvDraw = canv.getContext('2d');
+
+    let thing = 0;
+    let spacing = 500;
+    let text = "CONFIGURATION";
+    function drawTopBar() {
+        nextRGB();
+        canvDraw.clearRect(0,0,w,h);
+        canvDraw.font = "48px Comic Sans MS";
+        canvDraw.fillStyle = 'rgb(' + r + ',' + g + ',' +  b + ')';
+        if (toReset <= 0)
+            text = "CONFIGURATION";
+        for (let i=-2; i < Math.ceil(w / spacing);i++) {
+            canvDraw.fillText(text, i * spacing + thing, 48);
+            thing++;
+            if (thing >= spacing)
+                thing = 0;
+        }
+        toReset--;
+        requestAnimationFrame(drawTopBar);
+    }
+    requestAnimationFrame(drawTopBar);
+</script>
+<script>
+    // Populate initial values
+    (function() {
+        const fs = require('fs');
+        const electron = require('electron').remote;
+        let pat = electron.app.getPath('userData');
+        let x = fs.readFileSync(`${pat}/RRRconfig.json`, "UTF-8");
+        x = JSON.parse(x);
+        console.log(x);
+
+        // Music
+        if (x.music[0] === true) {
+            document.getElementsByTagName('select')[0].value = x.music[1];
+        } else {
+            document.getElementsByTagName('select')[0].value = "no";
+        }
+
+        //ACTIVATE WINDOWS OVERLAY
+        document.getElementById("activate-windows").checked = x.activate;
+
+        //RGB BACKGROUND
+        document.getElementById("rgb-bg").checked = x.rgb;
+
+        //RATE
+        document.getElementById("rate").value = x.rate;
+
+        //TEXTS
+        let t = "";
+        for (let i=0;i<x.texts.length;i++) {
+            t = t + x.texts[i] + "\n";
+        }
+
+        document.getElementById("texts").innerText = t;
+    })();
+</script>
+</body>
+</html>
