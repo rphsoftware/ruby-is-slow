@@ -17,7 +17,7 @@
   "email":"admin@rph.space",
   "dependencies": {},
   "build": {
-    "appId": "space.rph.storesafe",
+    "appId": "space.rph.ruby.is.slow",
     "win": {
       "target": [
         {
